@@ -1,0 +1,32 @@
+# TEMPORARY bring-up helper: run cargo fmt on the branch and push the result.
+# Delete this file once the tree is green and stable.
+name: fmt-fix
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to format
+        required: true
+        default: arena/01a06cc4-nnhhh
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.branch }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all
+      - name: Commit and push if dirty
+        run: |
+          git config user.name "aether-fmt-bot"
+          git config user.email "aether-fmt-bot@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && echo "already clean" || (git commit -m "style: cargo fmt" && git push origin HEAD:${{ inputs.branch }})

@@ -44,7 +44,11 @@ jobs:
           {
             echo "### fmt log (run ${{ github.run_id }})"
             echo '```'
-            tail -c 40000 /tmp/aether-fmt.log
+            grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-fmt.log | head -c 30000
+            echo '```'
+            echo 'tail:'
+            echo '```'
+            tail -c 6000 /tmp/aether-fmt.log
             echo '```'
           } > /tmp/aether-msg.txt
           gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt
@@ -60,7 +64,7 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - name: Lint
-        run: cargo clippy --workspace --all-targets --verbose 2>&1 | tee /tmp/aether-clippy.log; test ${PIPESTATUS[0]} -eq 0
+        run: cargo clippy --workspace --all-targets 2>&1 | tee /tmp/aether-clippy.log; test ${PIPESTATUS[0]} -eq 0
       - name: Post log to PR
         if: failure() && github.event_name == 'pull_request'
         env:
@@ -69,7 +73,11 @@ jobs:
           {
             echo "### clippy log (run ${{ github.run_id }})"
             echo '```'
-            tail -c 40000 /tmp/aether-clippy.log
+            grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-clippy.log | head -c 30000
+            echo '```'
+            echo 'tail:'
+            echo '```'
+            tail -c 6000 /tmp/aether-clippy.log
             echo '```'
           } > /tmp/aether-msg.txt
           gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt
@@ -87,7 +95,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Build
-        run: cargo build --workspace --all-targets --verbose 2>&1 | tee /tmp/aether-build.log; test ${PIPESTATUS[0]} -eq 0
+        run: cargo build --workspace --all-targets 2>&1 | tee /tmp/aether-build.log; test ${PIPESTATUS[0]} -eq 0
       - name: Post log to PR
         if: failure() && github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest'
         env:
@@ -96,7 +104,11 @@ jobs:
           {
             echo "### build log (run ${{ github.run_id }})"
             echo '```'
-            tail -c 40000 /tmp/aether-build.log
+            grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-build.log | head -c 30000
+            echo '```'
+            echo 'tail:'
+            echo '```'
+            tail -c 6000 /tmp/aether-build.log
             echo '```'
           } > /tmp/aether-msg.txt
           gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt
@@ -116,9 +128,9 @@ jobs:
       # lib + bins + integration tests + doctests; examples are compiled.
       # Benches are exercised separately in the bench job.
       - name: Test suite
-        run: cargo test --workspace --lib --bins --tests --examples --verbose 2>&1 | tee /tmp/aether-test.log; test ${PIPESTATUS[0]} -eq 0
+        run: cargo test --workspace --lib --bins --tests --examples 2>&1 | tee /tmp/aether-test.log; test ${PIPESTATUS[0]} -eq 0
       - name: Doctests
-        run: cargo test --workspace --doc --verbose 2>&1 | tee -a /tmp/aether-test.log; test ${PIPESTATUS[0]} -eq 0
+        run: cargo test --workspace --doc 2>&1 | tee -a /tmp/aether-test.log; test ${PIPESTATUS[0]} -eq 0
       - name: Post log to PR
         if: failure() && github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest'
         env:
@@ -127,7 +139,11 @@ jobs:
           {
             echo "### test log (run ${{ github.run_id }})"
             echo '```'
-            tail -c 40000 /tmp/aether-test.log
+            grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-test.log | head -c 30000
+            echo '```'
+            echo 'tail:'
+            echo '```'
+            tail -c 6000 /tmp/aether-test.log
             echo '```'
           } > /tmp/aether-msg.txt
           gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt
@@ -166,7 +182,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Bench smoke
-        run: cargo bench --no-run --verbose 2>&1 | tee /tmp/aether-bench.log; test ${PIPESTATUS[0]} -eq 0
+        run: cargo bench --no-run 2>&1 | tee /tmp/aether-bench.log; test ${PIPESTATUS[0]} -eq 0
       # Criterion test mode: every benchmark runs once, fast sanity smoke.
       - name: Bench run
         run: cargo bench -- --test 2>&1 | tee -a /tmp/aether-bench.log; test ${PIPESTATUS[0]} -eq 0
@@ -178,7 +194,11 @@ jobs:
           {
             echo "### bench log (run ${{ github.run_id }})"
             echo '```'
-            tail -c 40000 /tmp/aether-bench.log
+            grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-bench.log | head -c 30000
+            echo '```'
+            echo 'tail:'
+            echo '```'
+            tail -c 6000 /tmp/aether-bench.log
             echo '```'
           } > /tmp/aether-msg.txt
           gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt
@@ -210,7 +230,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Build release
-        run: cargo build --release --bin aether --examples --verbose 2>&1 | tee /tmp/aether-showcase.log; test ${PIPESTATUS[0]} -eq 0
+        run: cargo build --release --bin aether --examples 2>&1 | tee /tmp/aether-showcase.log; test ${PIPESTATUS[0]} -eq 0
       - name: Run the mind end to end
         run: |
           {
@@ -231,7 +251,11 @@ jobs:
           {
             echo "### showcase log (run ${{ github.run_id }})"
             echo '```'
-            tail -c 40000 /tmp/aether-showcase.log
+            grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-showcase.log | head -c 30000
+            echo '```'
+            echo 'tail:'
+            echo '```'
+            tail -c 6000 /tmp/aether-showcase.log
             echo '```'
           } > /tmp/aether-msg.txt
           gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt

@@ -13,6 +13,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Needed so failing jobs can paste their logs back onto the PR as comments
+# (used during bring-up; removed once the tree is green and stable).
+permissions:
+  contents: read
+  pull-requests: write
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
@@ -23,24 +29,50 @@ jobs:
     name: fmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
       - uses: Swatinem/rust-cache@v2
-      - run: cargo fmt --all -- --check
+      - name: Check formatting
+        run: cargo fmt --all -- --check 2>&1 | tee /tmp/aether-fmt.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Post log to PR
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### fmt log (run ${{ github.run_id }})"
+            echo '```'
+            tail -c 40000 /tmp/aether-fmt.log
+            echo '```'
+          } > /tmp/aether-msg.txt
+          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt
 
   # -------------------------------------------------------------------- clippy
   clippy:
     name: clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Lint
+        run: cargo clippy --workspace --all-targets --verbose 2>&1 | tee /tmp/aether-clippy.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Post log to PR
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### clippy log (run ${{ github.run_id }})"
+            echo '```'
+            tail -c 40000 /tmp/aether-clippy.log
+            echo '```'
+          } > /tmp/aether-msg.txt
+          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt
 
   # --------------------------------------------------------------------- build
   build:
@@ -51,10 +83,23 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --workspace --all-targets --verbose
+      - name: Build
+        run: cargo build --workspace --all-targets --verbose 2>&1 | tee /tmp/aether-build.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Post log to PR
+        if: failure() && github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### build log (run ${{ github.run_id }})"
+            echo '```'
+            tail -c 40000 /tmp/aether-build.log
+            echo '```'
+          } > /tmp/aether-msg.txt
+          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt
 
   # ---------------------------------------------------------------------- test
   test:
@@ -65,20 +110,34 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       # lib + bins + integration tests + doctests; examples are compiled.
       # Benches are exercised separately in the bench job.
-      - run: cargo test --workspace --lib --bins --tests --examples --verbose
-      - run: cargo test --workspace --doc --verbose
+      - name: Test suite
+        run: cargo test --workspace --lib --bins --tests --examples --verbose 2>&1 | tee /tmp/aether-test.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Doctests
+        run: cargo test --workspace --doc --verbose 2>&1 | tee -a /tmp/aether-test.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Post log to PR
+        if: failure() && github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### test log (run ${{ github.run_id }})"
+            echo '```'
+            tail -c 40000 /tmp/aether-test.log
+            echo '```'
+          } > /tmp/aether-msg.txt
+          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt
 
   # ----------------------------------------------------------------------- doc
   doc:
     name: doc
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo doc --workspace --no-deps
@@ -91,7 +150,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.75
@@ -103,19 +162,33 @@ jobs:
     name: bench
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo bench --no-run
+      - name: Bench smoke
+        run: cargo bench --no-run --verbose 2>&1 | tee /tmp/aether-bench.log; test ${PIPESTATUS[0]} -eq 0
       # Criterion test mode: every benchmark runs once, fast sanity smoke.
-      - run: cargo bench -- --test
+      - name: Bench run
+        run: cargo bench -- --test 2>&1 | tee -a /tmp/aether-bench.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Post log to PR
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### bench log (run ${{ github.run_id }})"
+            echo '```'
+            tail -c 40000 /tmp/aether-bench.log
+            echo '```'
+          } > /tmp/aether-msg.txt
+          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt
 
   # ------------------------------------------------------------------ coverage
   coverage:
     name: coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Install tarpaulin
@@ -123,7 +196,7 @@ jobs:
       - name: Collect coverage
         run: cargo tarpaulin --workspace --timeout 300 --out Xml --output-dir coverage
       - name: Upload report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-xml
           path: coverage/cobertura.xml
@@ -133,22 +206,37 @@ jobs:
     name: showcase
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release --bin aether --examples
+      - name: Build release
+        run: cargo build --release --bin aether --examples --verbose 2>&1 | tee /tmp/aether-showcase.log; test ${PIPESTATUS[0]} -eq 0
       - name: Run the mind end to end
         run: |
-          mkdir -p showcase
-          ./target/release/aether info --preset tiny | tee showcase/info.txt
-          ./target/release/aether demo | tee showcase/demo.txt
-          ./target/release/aether train --gens 3 --pop 4 | tee showcase/train.txt
-          ./target/release/aether dream --iters 3 --prompt 1,2,3 | tee showcase/dream.txt
-          ./target/release/aether tokenize --text "hello brave world" --merges 30 | tee showcase/tokenize.txt
-          ./target/release/examples/dreaming | tee showcase/example-dreaming.txt
-          ./target/release/examples/textgen | tee showcase/example-textgen.txt
+          {
+            mkdir -p showcase
+            ./target/release/aether info --preset tiny | tee showcase/info.txt
+            ./target/release/aether demo | tee showcase/demo.txt
+            ./target/release/aether train --gens 3 --pop 4 | tee showcase/train.txt
+            ./target/release/aether dream --iters 3 --prompt 1,2,3 | tee showcase/dream.txt
+            ./target/release/aether tokenize --text "hello brave world" --merges 30 | tee showcase/tokenize.txt
+            ./target/release/examples/dreaming | tee showcase/example-dreaming.txt
+            ./target/release/examples/textgen | tee showcase/example-textgen.txt
+          } 2>&1 | tee -a /tmp/aether-showcase.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Post log to PR
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### showcase log (run ${{ github.run_id }})"
+            echo '```'
+            tail -c 40000 /tmp/aether-showcase.log
+            echo '```'
+          } > /tmp/aether-msg.txt
+          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt
       - name: Upload showcase transcripts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: showcase-transcripts
           path: showcase/

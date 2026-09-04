@@ -75,7 +75,11 @@ impl EntangledAttention {
             w_k: Matrix::xavier_seeded(seed + 1, d, d),
             w_v: Matrix::xavier_seeded(seed + 2, d, d),
             w_o: Matrix::xavier_seeded(seed + 3, d, d),
-            w_gate: Matrix::randn_seeded(seed + 4, 1, d).into_vec().iter().map(|x| x * 0.1).collect(),
+            w_gate: Matrix::randn_seeded(seed + 4, 1, d)
+                .into_vec()
+                .iter()
+                .map(|x| x * 0.1)
+                .collect(),
             b_gate: 0.0,
         })
     }
@@ -101,7 +105,9 @@ impl EntangledAttention {
         let t = x.nrows();
         let d = self.d_model;
         if t == 0 {
-            return Err(AetherError::EmptyInput("attention got empty sequence".to_string()));
+            return Err(AetherError::EmptyInput(
+                "attention got empty sequence".to_string(),
+            ));
         }
         if x.ncols() != d {
             return Err(AetherError::ShapeMismatch(format!(

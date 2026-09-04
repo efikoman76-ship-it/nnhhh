@@ -48,7 +48,9 @@ impl SparseMoeConfig {
             )));
         }
         if self.noise_std < 0.0 {
-            return Err(AetherError::InvalidConfig("noise_std must be >= 0".to_string()));
+            return Err(AetherError::InvalidConfig(
+                "noise_std must be >= 0".to_string(),
+            ));
         }
         Ok(())
     }
@@ -114,7 +116,11 @@ impl SparseMoe {
         cfg.validate()?;
         let mut experts = Vec::with_capacity(cfg.n_experts);
         for e in 0..cfg.n_experts {
-            experts.push(SwiGluExpert::new(cfg.d_model, cfg.d_hidden, seed + 100 + e as u64 * 7));
+            experts.push(SwiGluExpert::new(
+                cfg.d_model,
+                cfg.d_hidden,
+                seed + 100 + e as u64 * 7,
+            ));
         }
         Ok(SparseMoe {
             d_model: cfg.d_model,
@@ -181,7 +187,9 @@ impl SparseMoe {
         }
         let t = x.nrows();
         if t == 0 {
-            return Err(AetherError::EmptyInput("moe got empty sequence".to_string()));
+            return Err(AetherError::EmptyInput(
+                "moe got empty sequence".to_string(),
+            ));
         }
         let mut out = Matrix::zeros(t, self.d_model);
         let mut routed = vec![0.0f32; self.n_experts];
@@ -216,7 +224,8 @@ impl SparseMoe {
 
     /// Total trainable scalars (experts + router).
     pub fn param_count(&self) -> usize {
-        self.experts.len() * 3 * self.d_model * self.experts_d_hidden() + self.d_model * self.n_experts
+        self.experts.len() * 3 * self.d_model * self.experts_d_hidden()
+            + self.d_model * self.n_experts
     }
 
     fn experts_d_hidden(&self) -> usize {

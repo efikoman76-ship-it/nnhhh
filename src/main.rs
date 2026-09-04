@@ -78,11 +78,18 @@ fn cmd_info(args: &[String]) -> i32 {
         Ok(mind) => {
             let c = mind.config();
             println!("aether mind [{} params]", mind.param_count());
-            println!("  d_model={} heads={} layers={} experts={}x(top{}) hidden={}",
-                c.d_model, c.n_heads, c.n_layers, c.n_experts, c.top_k, c.d_moe_hidden);
-            println!("  vocab={} max_seq={} window={}", c.vocab_size, c.max_seq, c.window);
-            println!("  memory sensory/working/episodic/semantic = {}/{}/{}/{}",
-                c.memory_sensory, c.memory_working, c.memory_episodic, c.memory_semantic);
+            println!(
+                "  d_model={} heads={} layers={} experts={}x(top{}) hidden={}",
+                c.d_model, c.n_heads, c.n_layers, c.n_experts, c.top_k, c.d_moe_hidden
+            );
+            println!(
+                "  vocab={} max_seq={} window={}",
+                c.vocab_size, c.max_seq, c.window
+            );
+            println!(
+                "  memory sensory/working/episodic/semantic = {}/{}/{}/{}",
+                c.memory_sensory, c.memory_working, c.memory_episodic, c.memory_semantic
+            );
             0
         }
         Err(e) => {
@@ -110,12 +117,23 @@ fn cmd_demo() -> i32 {
         }
     };
     let mean = out.logits.mean_all();
-    let max = out.logits.as_slice().iter().cloned().fold(f32::NEG_INFINITY, f32::max);
-    println!("forward ok: logits {}x{} mean={mean:.4} max={max:.4} aux={:.4}",
-        out.logits.nrows(), out.logits.ncols(), out.aux_loss);
+    let max = out
+        .logits
+        .as_slice()
+        .iter()
+        .cloned()
+        .fold(f32::NEG_INFINITY, f32::max);
+    println!(
+        "forward ok: logits {}x{} mean={mean:.4} max={max:.4} aux={:.4}",
+        out.logits.nrows(),
+        out.logits.ncols(),
+        out.aux_loss
+    );
     let stats = mind.memory_stats();
-    println!("memory: sensory={} working={} episodic={} semantic={} clock={:.0}",
-        stats.sensory, stats.working, stats.episodic, stats.semantic, stats.clock);
+    println!(
+        "memory: sensory={} working={} episodic={} semantic={} clock={:.0}",
+        stats.sensory, stats.working, stats.episodic, stats.semantic, stats.clock
+    );
     let sample = SampleConfig {
         temperature: 0.0,
         ..SampleConfig::default()
@@ -196,8 +214,12 @@ fn parse_ids(s: &str) -> Vec<usize> {
 }
 
 fn cmd_dream(args: &[String]) -> i32 {
-    let iters: usize = flag(args, "iters").and_then(|s| s.parse().ok()).unwrap_or(3);
-    let prompt = flag(args, "prompt").map(|s| parse_ids(&s)).unwrap_or(vec![1, 2, 3]);
+    let iters: usize = flag(args, "iters")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(3);
+    let prompt = flag(args, "prompt")
+        .map(|s| parse_ids(&s))
+        .unwrap_or(vec![1, 2, 3]);
     if prompt.is_empty() {
         eprintln!("dream needs a non-empty --prompt like 1,2,3");
         return 2;
@@ -220,8 +242,10 @@ fn cmd_dream(args: &[String]) -> i32 {
     };
     match engine.dream(&mut mind, &prompt, &mut seeded_rng(9)) {
         Ok(report) => {
-            println!("dream from {prompt:?}: best {:?} score={:.4} ({} candidates)",
-                report.best_ids, report.best_score, report.candidates_considered);
+            println!(
+                "dream from {prompt:?}: best {:?} score={:.4} ({} candidates)",
+                report.best_ids, report.best_score, report.candidates_considered
+            );
             println!("history: {:?}", report.history);
             0
         }
@@ -233,7 +257,9 @@ fn cmd_dream(args: &[String]) -> i32 {
 }
 
 fn cmd_tokenize(args: &[String]) -> i32 {
-    let merges: usize = flag(args, "merges").and_then(|s| s.parse().ok()).unwrap_or(30);
+    let merges: usize = flag(args, "merges")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(30);
     let text = flag(args, "text").unwrap_or_else(|| "hello brave world".to_string());
     let corpus = [
         "hello world hello",

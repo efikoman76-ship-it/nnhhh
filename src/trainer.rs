@@ -45,7 +45,9 @@ impl AdamW {
             ));
         }
         if !(0.0..1.0).contains(&beta1) || !(0.0..1.0).contains(&beta2) {
-            return Err(AetherError::InvalidConfig("betas must be in (0, 1)".to_string()));
+            return Err(AetherError::InvalidConfig(
+                "betas must be in (0, 1)".to_string(),
+            ));
         }
         Ok(AdamW {
             lr,
@@ -294,7 +296,10 @@ impl EvoTrainer {
                 "eval needs sequences of len >= 2".to_string(),
             ));
         }
-        Ok(((total / tokens as f64) as f32, (aux_sum / used as f64) as f32))
+        Ok((
+            (total / tokens as f64) as f32,
+            (aux_sum / used as f64) as f32,
+        ))
     }
 
     /// Run the configured generations; returns the last generation's stats.

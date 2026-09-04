@@ -52,7 +52,9 @@ impl ResonantSpec {
     /// Check ranges; called by every constructor downstream.
     pub fn validate(&self) -> Result<()> {
         if self.n_units == 0 {
-            return Err(AetherError::InvalidConfig("resonant n_units is 0".to_string()));
+            return Err(AetherError::InvalidConfig(
+                "resonant n_units is 0".to_string(),
+            ));
         }
         if !(0.0..1.0).contains(&self.freq_jitter) {
             return Err(AetherError::InvalidConfig(format!(
@@ -104,7 +106,9 @@ impl ResonantLayer {
                 self.spec.base_freq * (1.0 + jitter)
             })
             .collect();
-        self.phase = (0..n).map(|_| rng.gen_range(0.0..2.0 * std::f32::consts::PI)).collect();
+        self.phase = (0..n)
+            .map(|_| rng.gen_range(0.0..2.0 * std::f32::consts::PI))
+            .collect();
         self.amp = vec![0.5; n];
     }
 
@@ -154,8 +158,8 @@ impl ResonantLayer {
         }
         let mut out = vec![0.0f32; n];
         for i in 0..n {
-            self.phase[i] += self.spec.dt
-                * (self.freq[i] + self.spec.drive_gain * drive[i] + pull[i]);
+            self.phase[i] +=
+                self.spec.dt * (self.freq[i] + self.spec.drive_gain * drive[i] + pull[i]);
             let target = (self.spec.drive_gain * drive[i]).tanh().abs();
             self.amp[i] += self.spec.dt * self.spec.damping * (target - self.amp[i]);
             if self.amp[i] < 0.0 {

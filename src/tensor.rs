@@ -66,7 +66,9 @@ impl Matrix {
         }
         let cols = rows[0].len();
         if cols == 0 {
-            return Err(AetherError::EmptyInput("from_rows got empty rows".to_string()));
+            return Err(AetherError::EmptyInput(
+                "from_rows got empty rows".to_string(),
+            ));
         }
         for (i, r) in rows.iter().enumerate() {
             if r.len() != cols {
@@ -107,7 +109,9 @@ impl Matrix {
     pub fn xavier_seeded(seed: u64, rows: usize, cols: usize) -> Matrix {
         let bound = (6.0 / (rows + cols) as f32).sqrt();
         let mut rng = StdRng::seed_from_u64(seed);
-        let data: Vec<f32> = (0..rows * cols).map(|_| rng.gen_range(-bound..bound)).collect();
+        let data: Vec<f32> = (0..rows * cols)
+            .map(|_| rng.gen_range(-bound..bound))
+            .collect();
         Matrix { rows, cols, data }
     }
 
@@ -333,7 +337,11 @@ impl Matrix {
             }
             let mut sum = 0.0f32;
             for j in 0..self.cols {
-                let e = if mask[i][j] { (src[j] - max).exp() } else { 0.0 };
+                let e = if mask[i][j] {
+                    (src[j] - max).exp()
+                } else {
+                    0.0
+                };
                 dst[j] = e;
                 sum += e;
             }
@@ -362,8 +370,8 @@ impl Matrix {
             .for_each(|(i, dst)| {
                 let src = self.row(i);
                 let mean = src.iter().sum::<f32>() / self.cols as f32;
-                let var = src.iter().map(|x| (x - mean) * (x - mean)).sum::<f32>()
-                    / self.cols as f32;
+                let var =
+                    src.iter().map(|x| (x - mean) * (x - mean)).sum::<f32>() / self.cols as f32;
                 let inv = 1.0 / (var + eps).sqrt();
                 for j in 0..self.cols {
                     dst[j] = (src[j] - mean) * inv * gamma[j] + beta[j];
@@ -374,9 +382,7 @@ impl Matrix {
 
     /// Exact GELU activation.
     pub fn gelu(&self) -> Matrix {
-        self.map(|x| {
-            0.5 * x * (1.0 + (0.797_884_6 * (x + 0.044_715 * x * x * x)).tanh())
-        })
+        self.map(|x| 0.5 * x * (1.0 + (0.797_884_6 * (x + 0.044_715 * x * x * x)).tanh()))
     }
 
     /// SiLU / Swish activation.

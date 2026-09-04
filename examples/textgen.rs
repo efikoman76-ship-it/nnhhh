@@ -30,5 +30,8 @@ fn main() {
         .generate(&ids, 12, &sample, &mut seeded_rng(2))
         .expect("generate");
     println!("continuation ids: {cont:?}");
-    println!("decoded prompt roundtrip: {:?}", tok.decode(&tok.encode(text)));
+    println!(
+        "decoded prompt roundtrip: {:?}",
+        tok.decode(&tok.encode(text))
+    );
 }

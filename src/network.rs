@@ -147,10 +147,14 @@ impl AetherConfig {
             || self.memory_episodic == 0
             || self.memory_semantic == 0
         {
-            return Err(AetherError::InvalidConfig("memory caps must all be > 0".to_string()));
+            return Err(AetherError::InvalidConfig(
+                "memory caps must all be > 0".to_string(),
+            ));
         }
         if self.decay_tau <= 0.0 {
-            return Err(AetherError::InvalidConfig("decay_tau must be > 0".to_string()));
+            return Err(AetherError::InvalidConfig(
+                "decay_tau must be > 0".to_string(),
+            ));
         }
         Ok(())
     }
@@ -431,7 +435,9 @@ impl AetherMind {
         rng: &mut StdRng,
     ) -> Result<Vec<usize>> {
         if prompt.is_empty() {
-            return Err(AetherError::EmptyInput("generate got empty prompt".to_string()));
+            return Err(AetherError::EmptyInput(
+                "generate got empty prompt".to_string(),
+            ));
         }
         for &id in prompt {
             if id >= self.cfg.vocab_size {
@@ -546,8 +552,8 @@ impl AetherMind {
 
     /// Persist the whole organism (weights + oscillators + memory) as JSON.
     pub fn save_to(&self, path: &str) -> Result<()> {
-        let json = serde_json::to_string_pretty(self)
-            .map_err(|e| AetherError::Ser(e.to_string()))?;
+        let json =
+            serde_json::to_string_pretty(self).map_err(|e| AetherError::Ser(e.to_string()))?;
         fs::write(path, json).map_err(|e| AetherError::Io(e.to_string()))?;
         Ok(())
     }
@@ -562,7 +568,9 @@ impl AetherMind {
 /// Sample one id from raw logits under a [`SampleConfig`].
 pub fn sample_logits(logits: &[f32], sample: &SampleConfig, rng: &mut StdRng) -> Result<usize> {
     if logits.is_empty() {
-        return Err(AetherError::EmptyInput("sample_logits got no logits".to_string()));
+        return Err(AetherError::EmptyInput(
+            "sample_logits got no logits".to_string(),
+        ));
     }
     if !sample.temperature.is_finite() || sample.temperature < 0.0 {
         return Err(AetherError::InvalidConfig(
@@ -641,7 +649,11 @@ fn sinusoidal_pos(pos: usize, d: usize) -> Vec<f32> {
         .map(|i| {
             let pair = (i / 2 * 2) as f32;
             let angle = pos as f32 / 10_000f32.powf(pair / d as f32);
-            if i % 2 == 0 { angle.sin() } else { angle.cos() }
+            if i % 2 == 0 {
+                angle.sin()
+            } else {
+                angle.cos()
+            }
         })
         .collect()
 }
@@ -708,8 +720,12 @@ mod tests {
         };
         let mut a = tiny_mind();
         let mut b = tiny_mind();
-        let out_a = a.generate(&[1, 2, 3], 6, &sample, &mut seeded_rng(5)).unwrap();
-        let out_b = b.generate(&[1, 2, 3], 6, &sample, &mut seeded_rng(5)).unwrap();
+        let out_a = a
+            .generate(&[1, 2, 3], 6, &sample, &mut seeded_rng(5))
+            .unwrap();
+        let out_b = b
+            .generate(&[1, 2, 3], 6, &sample, &mut seeded_rng(5))
+            .unwrap();
         assert_eq!(out_a, out_b);
         assert_eq!(out_a.len(), 6);
         assert!(out_a.iter().all(|&id| id < 64));
@@ -761,8 +777,16 @@ mod tests {
         let path = std::env::temp_dir().join("aether_roundtrip.json");
         mind.save_to(path.to_str().unwrap()).unwrap();
         let mut back = AetherMind::load_from(path.to_str().unwrap()).unwrap();
-        let l1 = mind.forward(&[3, 1, 4], &mut seeded_rng(21)).unwrap().logits.into_vec();
-        let l2 = back.forward(&[3, 1, 4], &mut seeded_rng(21)).unwrap().logits.into_vec();
+        let l1 = mind
+            .forward(&[3, 1, 4], &mut seeded_rng(21))
+            .unwrap()
+            .logits
+            .into_vec();
+        let l2 = back
+            .forward(&[3, 1, 4], &mut seeded_rng(21))
+            .unwrap()
+            .logits
+            .into_vec();
         assert_eq!(l1, l2);
         let _ = std::fs::remove_file(path);
     }

@@ -9,7 +9,9 @@ fn dream_end_to_end() {
     let batch = vec![vec![1, 2, 3, 4, 5, 6], vec![6, 5, 4, 3, 2, 1]];
     let dim = mind.param_count();
     let mut trainer = EvoTrainer::new(EvoTrainerConfig::demo(), dim).unwrap();
-    trainer.train(&mut mind, &batch, &mut seeded_rng(5)).unwrap();
+    trainer
+        .train(&mut mind, &batch, &mut seeded_rng(5))
+        .unwrap();
 
     let cfg = CreativityConfig {
         n_candidates: 4,
@@ -18,7 +20,9 @@ fn dream_end_to_end() {
         ..CreativityConfig::default()
     };
     let mut engine = CreativityEngine::new(cfg).unwrap();
-    let report = engine.dream(&mut mind, &[2, 4, 6], &mut seeded_rng(8)).unwrap();
+    let report = engine
+        .dream(&mut mind, &[2, 4, 6], &mut seeded_rng(8))
+        .unwrap();
 
     assert_eq!(report.best_ids.len(), 8);
     assert!(report.best_score.is_finite());

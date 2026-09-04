@@ -58,14 +58,19 @@ impl CreativityConfig {
             ));
         }
         if self.temperatures.is_empty()
-            || self.temperatures.iter().any(|t| !t.is_finite() || *t <= 0.0)
+            || self
+                .temperatures
+                .iter()
+                .any(|t| !t.is_finite() || *t <= 0.0)
         {
             return Err(AetherError::InvalidConfig(
                 "temperatures must be non-empty, finite and > 0".to_string(),
             ));
         }
         if self.novelty_weight < 0.0 || self.quality_weight < 0.0 {
-            return Err(AetherError::InvalidConfig("weights must be >= 0".to_string()));
+            return Err(AetherError::InvalidConfig(
+                "weights must be >= 0".to_string(),
+            ));
         }
         Ok(())
     }
@@ -118,7 +123,9 @@ impl NoveltyArchive {
     /// Remember a fingerprint, evicting the oldest past capacity.
     pub fn add(&mut self, vec: Vec<f32>) -> Result<()> {
         if vec.is_empty() {
-            return Err(AetherError::EmptyInput("archive got empty vector".to_string()));
+            return Err(AetherError::EmptyInput(
+                "archive got empty vector".to_string(),
+            ));
         }
         if self.dim == 0 {
             self.dim = vec.len();
@@ -161,7 +168,9 @@ pub fn conceptual_blend(a: &[f32], b: &[f32], mix: f32) -> Result<Vec<f32>> {
         )));
     }
     if !(0.0..=1.0).contains(&mix) {
-        return Err(AetherError::InvalidConfig(format!("blend mix {mix} not in [0,1]")));
+        return Err(AetherError::InvalidConfig(format!(
+            "blend mix {mix} not in [0,1]"
+        )));
     }
     let mut out = Vec::with_capacity(a.len());
     for (x, y) in a.iter().zip(b.iter()) {
@@ -169,7 +178,9 @@ pub fn conceptual_blend(a: &[f32], b: &[f32], mix: f32) -> Result<Vec<f32>> {
     }
     let norm = out.iter().map(|v| v * v).sum::<f32>().sqrt();
     if norm < 1e-9 {
-        return Err(AetherError::InvalidConfig("blend collapsed to zero".to_string()));
+        return Err(AetherError::InvalidConfig(
+            "blend collapsed to zero".to_string(),
+        ));
     }
     for v in out.iter_mut() {
         *v /= norm;
@@ -225,7 +236,9 @@ impl CreativityEngine {
         rng: &mut StdRng,
     ) -> Result<Vec<Vec<usize>>> {
         if prompt.is_empty() {
-            return Err(AetherError::EmptyInput("diverge got empty prompt".to_string()));
+            return Err(AetherError::EmptyInput(
+                "diverge got empty prompt".to_string(),
+            ));
         }
         let mut forest = Vec::with_capacity(self.cfg.n_candidates);
         for i in 0..self.cfg.n_candidates {
@@ -280,7 +293,9 @@ impl CreativityEngine {
         rng: &mut StdRng,
     ) -> Result<DreamReport> {
         if prompt.is_empty() {
-            return Err(AetherError::EmptyInput("dream got empty prompt".to_string()));
+            return Err(AetherError::EmptyInput(
+                "dream got empty prompt".to_string(),
+            ));
         }
         let max_seq = mind.config().max_seq;
         let mut current = prompt.to_vec();
@@ -371,7 +386,9 @@ mod tests {
             ..CreativityConfig::default()
         };
         let mut engine = CreativityEngine::new(cfg).unwrap();
-        let report = engine.dream(&mut mind, &[1, 2, 3], &mut seeded_rng(9)).unwrap();
+        let report = engine
+            .dream(&mut mind, &[1, 2, 3], &mut seeded_rng(9))
+            .unwrap();
         assert_eq!(report.best_ids.len(), 6);
         assert!(report.best_score.is_finite());
         assert_eq!(report.history.len(), 2);
@@ -393,7 +410,9 @@ mod tests {
                 ..CreativityConfig::default()
             };
             let mut engine = CreativityEngine::new(cfg).unwrap();
-            engine.dream(&mut mind, &[4, 5], &mut seeded_rng(3)).unwrap()
+            engine
+                .dream(&mut mind, &[4, 5], &mut seeded_rng(3))
+                .unwrap()
         };
         let a = run();
         let b = run();

@@ -2,7 +2,7 @@
 name = "aether"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.81"
 description = "AETHER — Adaptive Entangled Thought with Holographic Emergent Resonance: a novel neural AI architecture in pure Rust"
 license = "MIT"
 repository = "https://github.com/efikoman76-ship-it/nnhhh"

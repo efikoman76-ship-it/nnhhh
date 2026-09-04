@@ -396,6 +396,7 @@ mod tests {
     use super::*;
     use crate::network::AetherConfig;
     use crate::seeded_rng;
+    use rand::SeedableRng;
 
     #[test]
     fn adamw_descends_a_quadratic() {

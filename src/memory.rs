@@ -309,6 +309,7 @@ impl FractalMemory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::SeedableRng;
 
     fn cfg() -> FractalMemoryConfig {
         FractalMemoryConfig {

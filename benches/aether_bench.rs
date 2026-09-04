@@ -63,7 +63,12 @@ fn bench_forward(c: &mut Criterion) {
     let mut mind = AetherMind::new(AetherConfig::tiny()).unwrap();
     let mut rng = seeded_rng(8);
     c.bench_function("mind forward T=8 tiny", |bencher| {
-        bencher.iter(|| black_box(mind.forward(black_box(&[1, 2, 3, 4, 5, 6, 7, 8]), &mut rng).unwrap()))
+        bencher.iter(|| {
+            black_box(
+                mind.forward(black_box(&[1, 2, 3, 4, 5, 6, 7, 8]), &mut rng)
+                    .unwrap(),
+            )
+        })
     });
 }
 

@@ -35,7 +35,9 @@ impl HebbianBank {
             ));
         }
         if lr <= 0.0 {
-            return Err(AetherError::InvalidConfig("hebbian lr must be > 0".to_string()));
+            return Err(AetherError::InvalidConfig(
+                "hebbian lr must be > 0".to_string(),
+            ));
         }
         Ok(HebbianBank {
             n,
@@ -112,7 +114,12 @@ impl HebbianBank {
     pub fn norms(&self) -> Vec<f32> {
         (0..self.n)
             .map(|i| {
-                self.prototypes.row(i).iter().map(|w| w * w).sum::<f32>().sqrt()
+                self.prototypes
+                    .row(i)
+                    .iter()
+                    .map(|w| w * w)
+                    .sum::<f32>()
+                    .sqrt()
             })
             .collect()
     }

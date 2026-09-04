@@ -14,7 +14,8 @@ fn tiny_batch() -> Vec<Vec<usize>> {
 fn full_loop_learns_and_persists() {
     // 1. Tokenizer learns a vocabulary.
     let mut tok = BpeTokenizer::new();
-    tok.train(&["aa bb cc aa bb", "bb cc dd ee", "aa ee ff gg"], 10).unwrap();
+    tok.train(&["aa bb cc aa bb", "bb cc dd ee", "aa ee ff gg"], 10)
+        .unwrap();
     assert!(tok.vocab_size() > 4);
 
     // 2. Mind runs a forward pass and generates.
@@ -40,8 +41,16 @@ fn full_loop_learns_and_persists() {
     let path = std::env::temp_dir().join("aether_e2e.json");
     mind.save_to(path.to_str().unwrap()).unwrap();
     let mut back = AetherMind::load_from(path.to_str().unwrap()).unwrap();
-    let a = mind.forward(&prompt, &mut seeded_rng(7)).unwrap().logits.into_vec();
-    let b = back.forward(&prompt, &mut seeded_rng(7)).unwrap().logits.into_vec();
+    let a = mind
+        .forward(&prompt, &mut seeded_rng(7))
+        .unwrap()
+        .logits
+        .into_vec();
+    let b = back
+        .forward(&prompt, &mut seeded_rng(7))
+        .unwrap()
+        .logits
+        .into_vec();
     assert_eq!(a, b);
     let _ = std::fs::remove_file(path);
 }

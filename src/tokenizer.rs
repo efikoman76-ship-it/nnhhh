@@ -43,7 +43,9 @@ impl BpeTokenizer {
     /// Learn `num_merges` merges from `corpus`.
     pub fn train(&mut self, corpus: &[&str], num_merges: usize) -> Result<()> {
         if corpus.is_empty() {
-            return Err(AetherError::EmptyInput("bpe train got empty corpus".to_string()));
+            return Err(AetherError::EmptyInput(
+                "bpe train got empty corpus".to_string(),
+            ));
         }
         // Split into words of character-pieces + EOW.
         let mut words: Vec<Vec<String>> = Vec::new();
@@ -58,7 +60,9 @@ impl BpeTokenizer {
             }
         }
         if words.is_empty() {
-            return Err(AetherError::EmptyInput("bpe train found no words".to_string()));
+            return Err(AetherError::EmptyInput(
+                "bpe train found no words".to_string(),
+            ));
         }
         // Base alphabet: every char + EOW + UNK.
         let mut base: Vec<String> = words
@@ -78,7 +82,9 @@ impl BpeTokenizer {
             let mut counts: HashMap<(String, String), usize> = HashMap::new();
             for word in &words {
                 for pair in word.windows(2) {
-                    *counts.entry((pair[0].clone(), pair[1].clone())).or_insert(0) += 1;
+                    *counts
+                        .entry((pair[0].clone(), pair[1].clone()))
+                        .or_insert(0) += 1;
                 }
             }
             if counts.is_empty() {
@@ -113,7 +119,11 @@ impl BpeTokenizer {
     }
 
     fn rebuild(&mut self, vocab: Vec<String>, merges: Vec<(String, String)>) {
-        self.token_to_id = vocab.iter().enumerate().map(|(i, t)| (t.clone(), i)).collect();
+        self.token_to_id = vocab
+            .iter()
+            .enumerate()
+            .map(|(i, t)| (t.clone(), i))
+            .collect();
         self.vocab = vocab;
         self.merges = merges;
         self.unk_id = 0;
@@ -160,7 +170,12 @@ impl BpeTokenizer {
                 raw.push_str(piece);
             }
         }
-        Ok(raw.split(EOW).collect::<Vec<_>>().join(" ").trim().to_string())
+        Ok(raw
+            .split(EOW)
+            .collect::<Vec<_>>()
+            .join(" ")
+            .trim()
+            .to_string())
     }
 
     /// Vocabulary size (includes `<unk>`).

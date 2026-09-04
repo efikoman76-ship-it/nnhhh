@@ -93,7 +93,9 @@ impl HyperVec {
     /// Superpose many vectors with per-item weights.
     pub fn weighted_bundle(items: &[(&HyperVec, f32)]) -> Result<HyperVec> {
         if items.is_empty() {
-            return Err(AetherError::EmptyInput("weighted_bundle got no items".to_string()));
+            return Err(AetherError::EmptyInput(
+                "weighted_bundle got no items".to_string(),
+            ));
         }
         let dim = items[0].0.dim;
         let mut acc = vec![0.0f32; dim];
@@ -116,7 +118,12 @@ impl HyperVec {
     /// Bind (associate) two vectors. Self-inverse: `unbind(bind(a,b),b) == a`.
     pub fn bind(a: &HyperVec, b: &HyperVec) -> Result<HyperVec> {
         a.check(b, "bind")?;
-        let data: Vec<f32> = a.data.iter().zip(b.data.iter()).map(|(x, y)| x * y).collect();
+        let data: Vec<f32> = a
+            .data
+            .iter()
+            .zip(b.data.iter())
+            .map(|(x, y)| x * y)
+            .collect();
         Ok(HyperVec { dim: a.dim, data })
     }
 
@@ -131,7 +138,10 @@ impl HyperVec {
         for i in 0..self.dim {
             data[(i + shift) % self.dim] = self.data[i];
         }
-        HyperVec { dim: self.dim, data }
+        HyperVec {
+            dim: self.dim,
+            data,
+        }
     }
 
     /// Encode an ordered n-gram: `permute` each item by its position, then bundle.
@@ -198,7 +208,9 @@ impl HoloMemory {
     /// Empty memory for `dim`-wide vectors.
     pub fn new(dim: usize) -> Result<HoloMemory> {
         if dim == 0 {
-            return Err(AetherError::InvalidConfig("HoloMemory dim is 0".to_string()));
+            return Err(AetherError::InvalidConfig(
+                "HoloMemory dim is 0".to_string(),
+            ));
         }
         Ok(HoloMemory {
             dim,

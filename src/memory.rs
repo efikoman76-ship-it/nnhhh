@@ -41,14 +41,18 @@ impl FractalMemoryConfig {
     /// Validate ranges.
     pub fn validate(&self) -> Result<()> {
         if self.d_model == 0 {
-            return Err(AetherError::InvalidConfig("memory d_model is 0".to_string()));
+            return Err(AetherError::InvalidConfig(
+                "memory d_model is 0".to_string(),
+            ));
         }
         if self.sensory_cap == 0
             || self.working_cap == 0
             || self.episodic_cap == 0
             || self.semantic_cap == 0
         {
-            return Err(AetherError::InvalidConfig("memory caps must all be > 0".to_string()));
+            return Err(AetherError::InvalidConfig(
+                "memory caps must all be > 0".to_string(),
+            ));
         }
         if self.decay_tau <= 0.0 || self.promote_strength <= 0.0 {
             return Err(AetherError::InvalidConfig(
@@ -164,8 +168,11 @@ impl FractalMemory {
                 weights.len()
             )));
         }
-        let mut scored: Vec<(Vec<f32>, f32)> =
-            self.sensory.drain(..).zip(weights.iter().cloned()).collect();
+        let mut scored: Vec<(Vec<f32>, f32)> = self
+            .sensory
+            .drain(..)
+            .zip(weights.iter().cloned())
+            .collect();
         scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         scored.truncate(self.cfg.working_cap);
         self.working = scored;
@@ -279,7 +286,8 @@ impl FractalMemory {
         self.check_dim(query, "recall")?;
         let mut scored: Vec<(Vec<f32>, f32)> = Vec::new();
         for trace in &self.episodic {
-            let s = cosine_slices(&trace.vec, query) * trace.strength(self.clock, self.cfg.decay_tau);
+            let s =
+                cosine_slices(&trace.vec, query) * trace.strength(self.clock, self.cfg.decay_tau);
             scored.push((trace.vec.clone(), s));
         }
         for proto in &self.semantic {

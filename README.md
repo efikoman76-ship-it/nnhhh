@@ -5,7 +5,7 @@
 
 [![AETHER CI](https://github.com/efikoman76-ship-it/nnhhh/actions/workflows/ci.yml/badge.svg)](https://github.com/efikoman76-ship-it/nnhhh/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-cyan.svg)](LICENSE-MIT)
-[![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
+[![Rust](https://img.shields.io/badge/rust-1.81%2B-orange.svg)](https://www.rust-lang.org)
 
 AETHER is not another transformer wrapper. It is a from-scratch cognitive
 organism that fuses **hyperdimensional computing**, **oscillatory resonance**,

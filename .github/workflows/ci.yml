@@ -13,11 +13,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Needed so failing jobs can paste their logs back onto the PR as comments
-# (used during bring-up; removed once the tree is green and stable).
 permissions:
   contents: read
-  pull-requests: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -33,7 +30,6 @@ jobs:
         shell: bash
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v5
         with:
@@ -54,22 +50,6 @@ jobs:
           git diff --cached --quiet && echo "already clean" || (git commit -m "style: cargo fmt [automated]" && git push origin HEAD:${{ github.event.pull_request.head.ref }})
       - name: Verify clean
         run: cargo fmt --all -- --check 2>&1 | tee /tmp/aether-fmt.log; test ${PIPESTATUS[0]} -eq 0
-      - name: Post log to PR
-        if: failure() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          {
-            echo "### fmt log (run ${{ github.run_id }})"
-            echo '```'
-            grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-fmt.log | head -c 30000 || true
-            echo '```'
-            echo 'tail:'
-            echo '```'
-            tail -c 6000 /tmp/aether-fmt.log || echo "(no log captured)"
-            echo '```'
-          } > /tmp/aether-msg.txt || true
-          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt || echo "comment post failed (non-fatal)"
 
 
   # -------------------------------------------------------------------- clippy
@@ -87,22 +67,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Lint
         run: cargo clippy --workspace --all-targets 2>&1 | tee /tmp/aether-clippy.log; test ${PIPESTATUS[0]} -eq 0
-      - name: Post log to PR
-        if: failure() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          {
-            echo "### clippy log (run ${{ github.run_id }})"
-            echo '```'
-            grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-clippy.log | head -c 30000 || true
-            echo '```'
-            echo 'tail:'
-            echo '```'
-            tail -c 6000 /tmp/aether-clippy.log || echo "(no log captured)"
-            echo '```'
-          } > /tmp/aether-msg.txt || true
-          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt || echo "comment post failed (non-fatal)"
 
 
   # --------------------------------------------------------------------- build
@@ -122,22 +86,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Build
         run: cargo build --workspace --all-targets 2>&1 | tee /tmp/aether-build.log; test ${PIPESTATUS[0]} -eq 0
-      - name: Post log to PR
-        if: failure() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          {
-            echo "### build log (${{ matrix.os }}, run ${{ github.run_id }})"
-            echo '```'
-            grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-build.log | head -c 30000 || true
-            echo '```'
-            echo 'tail:'
-            echo '```'
-            tail -c 6000 /tmp/aether-build.log || echo "(no log captured)"
-            echo '```'
-          } > /tmp/aether-msg.txt || true
-          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt || echo "comment post failed (non-fatal)"
 
 
   # ---------------------------------------------------------------------- test
@@ -161,22 +109,6 @@ jobs:
         run: cargo test --workspace --lib --bins --tests --examples 2>&1 | tee /tmp/aether-test.log; test ${PIPESTATUS[0]} -eq 0
       - name: Doctests
         run: cargo test --workspace --doc 2>&1 | tee -a /tmp/aether-test.log; test ${PIPESTATUS[0]} -eq 0
-      - name: Post log to PR
-        if: failure() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          {
-            echo "### test log (${{ matrix.os }}, run ${{ github.run_id }})"
-            echo '```'
-            grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-test.log | head -c 30000 || true
-            echo '```'
-            echo 'tail:'
-            echo '```'
-            tail -c 6000 /tmp/aether-test.log || echo "(no log captured)"
-            echo '```'
-          } > /tmp/aether-msg.txt || true
-          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt || echo "comment post failed (non-fatal)"
 
 
   # ----------------------------------------------------------------------- doc
@@ -210,22 +142,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: MSRV check
         run: cargo +1.81 check --lib 2>&1 | tee /tmp/aether-msrv.log; test ${PIPESTATUS[0]} -eq 0
-      - name: Post log to PR
-        if: failure() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          {
-            echo "### msrv log (run ${{ github.run_id }})"
-            echo '```'
-            grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-msrv.log | head -c 30000 || true
-            echo '```'
-            echo 'tail:'
-            echo '```'
-            tail -c 6000 /tmp/aether-msrv.log || echo "(no log captured)"
-            echo '```'
-          } > /tmp/aether-msg.txt || true
-          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt || echo "comment post failed (non-fatal)"
 
 
   # --------------------------------------------------------------------- bench
@@ -244,22 +160,6 @@ jobs:
       # Criterion test mode: every benchmark runs once, fast sanity smoke.
       - name: Bench run
         run: cargo bench -- --test 2>&1 | tee -a /tmp/aether-bench.log; test ${PIPESTATUS[0]} -eq 0
-      - name: Post log to PR
-        if: failure() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          {
-            echo "### bench log (run ${{ github.run_id }})"
-            echo '```'
-            grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-bench.log | head -c 30000 || true
-            echo '```'
-            echo 'tail:'
-            echo '```'
-            tail -c 6000 /tmp/aether-bench.log || echo "(no log captured)"
-            echo '```'
-          } > /tmp/aether-msg.txt || true
-          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt || echo "comment post failed (non-fatal)"
 
 
   # ------------------------------------------------------------------ coverage
@@ -308,22 +208,6 @@ jobs:
             ./target/release/examples/dreaming | tee showcase/example-dreaming.txt
             ./target/release/examples/textgen | tee showcase/example-textgen.txt
           } 2>&1 | tee -a /tmp/aether-showcase.log; test ${PIPESTATUS[0]} -eq 0
-      - name: Post log to PR
-        if: failure() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          {
-            echo "### showcase log (run ${{ github.run_id }})"
-            echo '```'
-            grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-showcase.log | head -c 30000 || true
-            echo '```'
-            echo 'tail:'
-            echo '```'
-            tail -c 6000 /tmp/aether-showcase.log || echo "(no log captured)"
-            echo '```'
-          } > /tmp/aether-msg.txt || true
-          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt || echo "comment post failed (non-fatal)"
 
       - name: Upload showcase transcripts
         uses: actions/upload-artifact@v5

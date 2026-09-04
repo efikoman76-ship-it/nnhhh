@@ -594,7 +594,8 @@ pub fn sample_logits(logits: &[f32], sample: &SampleConfig, rng: &mut StdRng) ->
                 .partial_cmp(&scores[a])
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
-        let cutoff = scores[order[sample.top_k]];
+        // kth-largest (0-indexed k-1): everything below it is masked out.
+        let cutoff = scores[order[sample.top_k - 1]];
         for s in scores.iter_mut() {
             if *s < cutoff {
                 *s = f32::NEG_INFINITY;

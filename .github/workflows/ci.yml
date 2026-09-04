@@ -189,7 +189,7 @@ jobs:
       # Newest rayon-core needs rustc 1.80; pin the rayon line to the newest
       # release whose MSRV still fits 1.75 so the check tests OUR code.
       - name: Downgrade rayon for MSRV
-        run: cargo +1.75 update -p rayon --precise 1.11.0
+        run: cargo +1.75 update -p rayon --precise 1.10.0
       - name: MSRV check
         run: cargo +1.75 check --lib 2>&1 | tee /tmp/aether-msrv.log; test ${PIPESTATUS[0]} -eq 0
       - name: Post log to PR

@@ -28,13 +28,28 @@ jobs:
   fmt:
     name: fmt
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Same-repo branches only: check out the head so fixes can push back.
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
       - uses: Swatinem/rust-cache@v2
-      - name: Check formatting
+      - name: Apply formatting
+        run: cargo fmt --all
+      - name: Push formatting fixes
+        if: github.event_name == 'pull_request'
+        run: |
+          git config user.name "aether-fmt-bot"
+          git config user.email "aether-fmt-bot@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && echo "already clean" || (git commit -m "style: cargo fmt [automated]" && git push origin HEAD:${{ github.event.pull_request.head.ref }})
+      - name: Verify clean
         run: cargo fmt --all -- --check 2>&1 | tee /tmp/aether-fmt.log; test ${PIPESTATUS[0]} -eq 0
       - name: Post log to PR
         if: failure() && github.event_name == 'pull_request'

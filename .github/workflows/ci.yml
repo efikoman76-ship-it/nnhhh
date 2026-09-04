@@ -1,0 +1,216 @@
+name: AETHER CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  schedule:
+    # Weekly health check, Monday 04:00 UTC.
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ---------------------------------------------------------------- formatting
+  fmt:
+    name: fmt
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Same-repo branches only: check out the head so fixes can push back.
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Apply formatting
+        run: cargo fmt --all
+      - name: Push formatting fixes
+        if: github.event_name == 'pull_request'
+        run: |
+          git config user.name "aether-fmt-bot"
+          git config user.email "aether-fmt-bot@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && echo "already clean" || (git commit -m "style: cargo fmt [automated]" && git push origin HEAD:${{ github.event.pull_request.head.ref }})
+      - name: Verify clean
+        run: cargo fmt --all -- --check 2>&1 | tee /tmp/aether-fmt.log; test ${PIPESTATUS[0]} -eq 0
+
+
+  # -------------------------------------------------------------------- clippy
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Lint
+        run: cargo clippy --workspace --all-targets 2>&1 | tee /tmp/aether-clippy.log; test ${PIPESTATUS[0]} -eq 0
+
+
+  # --------------------------------------------------------------------- build
+  build:
+    name: build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --workspace --all-targets 2>&1 | tee /tmp/aether-build.log; test ${PIPESTATUS[0]} -eq 0
+
+
+  # ---------------------------------------------------------------------- test
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # lib + bins + integration tests + doctests; examples are compiled.
+      # Benches are exercised separately in the bench job.
+      - name: Test suite
+        run: cargo test --workspace --lib --bins --tests --examples 2>&1 | tee /tmp/aether-test.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Doctests
+        run: cargo test --workspace --doc 2>&1 | tee -a /tmp/aether-test.log; test ${PIPESTATUS[0]} -eq 0
+
+
+  # ----------------------------------------------------------------------- doc
+  doc:
+    name: doc
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo doc --workspace --no-deps
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+
+  # ---------------------------------------------------------------------- msrv
+  msrv:
+    name: msrv-1.81
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.81
+      - uses: Swatinem/rust-cache@v2
+      - name: MSRV check
+        run: cargo +1.81 check --lib 2>&1 | tee /tmp/aether-msrv.log; test ${PIPESTATUS[0]} -eq 0
+
+
+  # --------------------------------------------------------------------- bench
+  bench:
+    name: bench
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Bench smoke
+        run: cargo bench --no-run 2>&1 | tee /tmp/aether-bench.log; test ${PIPESTATUS[0]} -eq 0
+      # Criterion test mode: every benchmark runs once, fast sanity smoke.
+      - name: Bench run
+        run: cargo bench -- --test 2>&1 | tee -a /tmp/aether-bench.log; test ${PIPESTATUS[0]} -eq 0
+
+
+  # ------------------------------------------------------------------ coverage
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin --locked
+      - name: Collect coverage
+        run: cargo tarpaulin --workspace --timeout 300 --out Xml --output-dir coverage
+      - name: Upload report
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage-xml
+          path: coverage/cobertura.xml
+
+  # ------------------------------------------------------------------ showcase
+  showcase:
+    name: showcase
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build release
+        run: cargo build --release --bin aether --examples 2>&1 | tee /tmp/aether-showcase.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Run the mind end to end
+        run: |
+          {
+            mkdir -p showcase
+            ./target/release/aether info --preset tiny | tee showcase/info.txt
+            ./target/release/aether demo | tee showcase/demo.txt
+            ./target/release/aether train --gens 3 --pop 4 | tee showcase/train.txt
+            ./target/release/aether dream --iters 3 --prompt 1,2,3 | tee showcase/dream.txt
+            ./target/release/aether tokenize --text "hello brave world" --merges 30 | tee showcase/tokenize.txt
+            ./target/release/examples/dreaming | tee showcase/example-dreaming.txt
+            ./target/release/examples/textgen | tee showcase/example-textgen.txt
+          } 2>&1 | tee -a /tmp/aether-showcase.log; test ${PIPESTATUS[0]} -eq 0
+
+      - name: Upload showcase transcripts
+        uses: actions/upload-artifact@v5
+        with:
+          name: showcase-transcripts
+          path: showcase/

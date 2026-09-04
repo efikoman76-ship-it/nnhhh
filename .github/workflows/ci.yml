@@ -178,7 +178,7 @@ jobs:
       - name: Collect coverage
         run: cargo tarpaulin --workspace --timeout 300 --out Xml --output-dir coverage
       - name: Upload report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-xml
           path: coverage/cobertura.xml
@@ -210,7 +210,7 @@ jobs:
           } 2>&1 | tee -a /tmp/aether-showcase.log; test ${PIPESTATUS[0]} -eq 0
 
       - name: Upload showcase transcripts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: showcase-transcripts
           path: showcase/

@@ -734,7 +734,8 @@ mod tests {
     #[test]
     fn sampler_edges() {
         let mut rng = seeded_rng(0);
-        let logits = vec![1.0, 5.0, 2.0, 5.0];
+        // Unique maximum: top_k = 1 must collapse to the argmax exactly.
+        let logits = vec![1.0, 5.0, 2.0, 4.0];
         // Greedy takes the first argmax.
         let greedy = SampleConfig {
             temperature: 0.0,

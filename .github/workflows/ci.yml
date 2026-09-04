@@ -112,12 +112,12 @@ jobs:
       - name: Build
         run: cargo build --workspace --all-targets 2>&1 | tee /tmp/aether-build.log; test ${PIPESTATUS[0]} -eq 0
       - name: Post log to PR
-        if: failure() && github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest'
+        if: failure() && github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           {
-            echo "### build log (run ${{ github.run_id }})"
+            echo "### build log (${{ matrix.os }}, run ${{ github.run_id }})"
             echo '```'
             grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-build.log | head -c 30000
             echo '```'
@@ -147,12 +147,12 @@ jobs:
       - name: Doctests
         run: cargo test --workspace --doc 2>&1 | tee -a /tmp/aether-test.log; test ${PIPESTATUS[0]} -eq 0
       - name: Post log to PR
-        if: failure() && github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest'
+        if: failure() && github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           {
-            echo "### test log (run ${{ github.run_id }})"
+            echo "### test log (${{ matrix.os }}, run ${{ github.run_id }})"
             echo '```'
             grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-test.log | head -c 30000
             echo '```'
@@ -186,7 +186,24 @@ jobs:
         with:
           toolchain: 1.75
       - uses: Swatinem/rust-cache@v2
-      - run: cargo +1.75 check --lib
+      - name: MSRV check
+        run: cargo +1.75 check --lib 2>&1 | tee /tmp/aether-msrv.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Post log to PR
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### msrv log (run ${{ github.run_id }})"
+            echo '```'
+            grep -E -B1 -A14 '^error(\[|:)|FAILED|panicked at|^failures:$|test result:' /tmp/aether-msrv.log | head -c 30000
+            echo '```'
+            echo 'tail:'
+            echo '```'
+            tail -c 6000 /tmp/aether-msrv.log
+            echo '```'
+          } > /tmp/aether-msg.txt
+          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/aether-msg.txt
 
   # --------------------------------------------------------------------- bench
   bench:

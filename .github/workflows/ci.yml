@@ -1,0 +1,154 @@
+name: AETHER CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  schedule:
+    # Weekly health check, Monday 04:00 UTC.
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ---------------------------------------------------------------- formatting
+  fmt:
+    name: fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+
+  # -------------------------------------------------------------------- clippy
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+
+  # --------------------------------------------------------------------- build
+  build:
+    name: build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --workspace --all-targets --verbose
+
+  # ---------------------------------------------------------------------- test
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # lib + bins + integration tests + doctests; examples are compiled.
+      # Benches are exercised separately in the bench job.
+      - run: cargo test --workspace --lib --bins --tests --examples --verbose
+      - run: cargo test --workspace --doc --verbose
+
+  # ----------------------------------------------------------------------- doc
+  doc:
+    name: doc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo doc --workspace --no-deps
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+
+  # ---------------------------------------------------------------------- msrv
+  msrv:
+    name: msrv-1.75
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.75
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo +1.75 check --lib
+
+  # --------------------------------------------------------------------- bench
+  bench:
+    name: bench
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo bench --no-run
+      # Criterion test mode: every benchmark runs once, fast sanity smoke.
+      - run: cargo bench -- --test
+
+  # ------------------------------------------------------------------ coverage
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin --locked
+      - name: Collect coverage
+        run: cargo tarpaulin --workspace --timeout 300 --out Xml --output-dir coverage
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage/cobertura.xml
+
+  # ------------------------------------------------------------------ showcase
+  showcase:
+    name: showcase
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --bin aether --examples
+      - name: Run the mind end to end
+        run: |
+          mkdir -p showcase
+          ./target/release/aether info --preset tiny | tee showcase/info.txt
+          ./target/release/aether demo | tee showcase/demo.txt
+          ./target/release/aether train --gens 3 --pop 4 | tee showcase/train.txt
+          ./target/release/aether dream --iters 3 --prompt 1,2,3 | tee showcase/dream.txt
+          ./target/release/aether tokenize --text "hello brave world" --merges 30 | tee showcase/tokenize.txt
+          ./target/release/examples/dreaming | tee showcase/example-dreaming.txt
+          ./target/release/examples/textgen | tee showcase/example-textgen.txt
+      - name: Upload showcase transcripts
+        uses: actions/upload-artifact@v4
+        with:
+          name: showcase-transcripts
+          path: showcase/

@@ -1,0 +1,30 @@
+# Rust build artifacts
+/target/
+# Cargo lock is kept for reproducible CI (binary crate). Remove this line's
+# exception only if this ever becomes a pure library.
+# Cargo.lock  (intentionally tracked)
+
+# Editor / OS noise
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Benchmark / profiling outputs
+criterion/
+*.profraw
+*.profdata
+flamegraph.svg
+perf.data*
+
+# Coverage
+tarpaulin-report.*
+lcov.info
+coverage/
+
+# Local experiment outputs (dream transcripts, checkpoints made by hand)
+showcase/
+*.ckpt.json

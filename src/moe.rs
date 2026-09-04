@@ -10,7 +10,7 @@
 use crate::error::{AetherError, Result};
 use crate::tensor::Matrix;
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 /// Construction parameters for the sparse MoE layer.
@@ -239,6 +239,7 @@ fn softmax_vec(xs: &[f32]) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::SeedableRng;
 
     fn cfg() -> SparseMoeConfig {
         SparseMoeConfig {

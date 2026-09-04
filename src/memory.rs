@@ -223,7 +223,9 @@ impl FractalMemory {
         let threshold = self.cfg.promote_strength;
         let mut promoted = 0usize;
         let mut remaining = Vec::with_capacity(self.episodic.len());
-        for trace in self.episodic.drain(..) {
+        // Drain first: scoring borrows nothing, but absorption needs &mut self.
+        let traces: Vec<EpisodicTrace> = self.episodic.drain(..).collect();
+        for trace in traces {
             if trace.strength(now, tau) >= threshold {
                 self.absorb_into_semantic(&trace.vec);
                 promoted += 1;
